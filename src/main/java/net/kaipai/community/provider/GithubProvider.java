@@ -2,6 +2,7 @@ package net.kaipai.community.provider;
 
 import com.alibaba.fastjson.JSON;
 import net.kaipai.community.dto.AccessTokenDTO;
+import net.kaipai.community.dto.GithubUser;
 import okhttp3.*;
 import org.springframework.stereotype.Component;
 
@@ -22,13 +23,34 @@ public class GithubProvider {
                 .build();
         try (Response response = client.newCall(request).execute()) {
             String string = response.body().string();
-            System.out.println(string);
-            return string;
+            String token = string.split("&")[0].split("=")[1];
 
-        } catch (IOException e) {
+            return token;
+
+        } catch (Exception e) {
             e.printStackTrace();
+
         }
         return null;
 
+    }
+
+    public GithubUser getUser(String access_token){
+        OkHttpClient client = new OkHttpClient();
+
+            Request request = new Request.Builder()
+                    .url("https://api.github.com/user?access_token="+access_token)
+                    .build();
+
+            try (Response response = client.newCall(request).execute()) {
+                String string = response.body().string();
+                System.out.println(string);
+
+                GithubUser githubUser = JSON.parseObject(string, GithubUser.class);
+                    return  githubUser;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        return null;
     }
 }
