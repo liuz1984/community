@@ -1,62 +1,57 @@
 package net.kaipai.community.controller;
 
+
 import net.kaipai.community.dto.AccessTokenDTO;
 import net.kaipai.community.dto.GithubUser;
-import net.kaipai.community.mapper.UserMapper;
-import net.kaipai.community.model.User;
+
 import net.kaipai.community.provider.GithubProvider;
+import net.kaipai.community.service.impl.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
-import java.util.UUID;
+import javax.servlet.http.HttpServletResponse;
+
 
 @Controller
 public class AuthorizeController {
     @Autowired
-    private GithubProvider githubProvider;
-
-    @Value("${github.Client.id}")
-    private String clientID;
-    @Value("${github.Client.secret}")
-    private String clientSecret;
-    @Value("${github.Redirect.uri}")
-    private String redirectUrl;
+    private UserService userService;
 
     @Autowired
-    private UserMapper userMapper;
+    private GithubProvider githubProvider;
+
+
+
+
     @GetMapping("/callback")
     public String callback(@RequestParam(name = "code") String code,
-                            @RequestParam(name ="state") String state,
-                           HttpServletRequest request
-                           ){
+                           @RequestParam(name = "state")String state,
 
-        AccessTokenDTO accessTokenDTO = new AccessTokenDTO();
-        accessTokenDTO.setClient_id(clientID);
-        accessTokenDTO.setClient_secret(clientSecret);
-        accessTokenDTO.setCode(code);
-        accessTokenDTO.setRedirect_uri(redirectUrl);
-        accessTokenDTO.setState(state);
+                           HttpServletResponse response
+    ) {
+
+        AccessTokenDTO accessTokenDTO=githubProvider.initAccessTokenDTO(code,state);
         String accessToken = githubProvider.getAccessToken(accessTokenDTO);
         GithubUser githubuser = githubProvider.getUser(accessToken);
-        if(githubuser!=null){
-            User user = new User();
-            user.setToken(UUID.randomUUID().toString());
-            user.setAccountId(githubuser.getId());
-            user.setName(githubuser.getName());
-            user.setGmtCreate(System.currentTimeMillis());
-            user.setGmtModified(user.getGmtCreate());
-            userMapper.insert(user);
-            request.getSession().setAttribute("user",githubuser);
-            return "redirect:/";
-        }else {
-            //登录失败
-            return "redirect:/";
+        String token = userService.creatUser(githubuser);
+
+                response.addCookie(new Cookie("token", token));
+
+                return "redirect:/";
+
+
         }
-
-
     }
-}
+
+
+
+
+
+
+
+
